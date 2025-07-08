@@ -40,6 +40,12 @@ class GatedGCNLSPELayer(nn.Module):
     def message_func_for_pj(self, edges):
         pj = edges.src['p']  # p_j
         return {'C2_pj': self.C2(pj)}
+    
+    def message_func_for_pj_inv(self, edges):
+        pj = edges.src['p'] # p_j 
+        pk = edges.dst['p']
+        return {'C3_pj_pi': pk * self.C3 * pj}
+
 
     def compute_normalized_eta(self, edges):
         return {'eta_ij': edges.data['sigma_hat_eta'] / (
@@ -60,6 +66,7 @@ class GatedGCNLSPELayer(nn.Module):
             # For the p's
             g.ndata['p'] = p
             g.ndata['C1_p'] = self.C1(p)
+            g.ndata['C4_p'] = self.C4 * p
             # self.C2 being used in message_func_for_pj() function
             # For the e's
             g.edata['e'] = e
@@ -67,7 +74,8 @@ class GatedGCNLSPELayer(nn.Module):
             # --------------------------------------------------------------------------------------#
             # Calculation of h
             g.apply_edges(fn.u_add_v('B1_h', 'B2_h', 'B1_B2_h'))
-            g.edata['hat_eta'] = g.edata['B1_B2_h'] + g.edata['B3_e']
+            g.apply_edges(self.message_func_for_pj_inv)
+            g.edata['hat_eta'] = g.edata['B1_B2_h'] + g.edata['B3_e'] + g.edata['C3_pj_pi'] #added 1-EPNN dists
             g.edata['sigma_hat_eta'] = torch.sigmoid(g.edata['hat_eta'])
             g.update_all(fn.copy_e('sigma_hat_eta', 'm'), fn.sum('m', 'sum_sigma_hat_eta'))  # sum_j' sigma_hat_eta_ij'
             g.apply_edges(self.compute_normalized_eta)  # sigma_hat_eta_ij/ sum_j' sigma_hat_eta_ij'
@@ -77,7 +85,7 @@ class GatedGCNLSPELayer(nn.Module):
             g.ndata['h'] = g.ndata['A1_h'] + g.ndata['sum_eta_v']
             # Calculation of p
             g.apply_edges(self.message_func_for_pj)  # p_j
-            g.edata['eta_mul_p'] = g.edata['eta_ij'] * g.edata['C2_pj']  # eta_ij * C2_pj
+            g.edata['eta_mul_p'] = g.edata['eta_ij'] * g.edata['C2_pj']# + g.edata['eta_ij'] * g.edata['C3_pj_pi'] # eta_ij * C2_pj
             g.update_all(fn.copy_e('eta_mul_p', 'm'), fn.sum('m', 'sum_eta_p'))  # sum_j eta_ij * C2_pj
             g.ndata['p'] = g.ndata['C1_p'] + g.ndata['sum_eta_p']
             # --------------------------------------------------------------------------------------#
@@ -111,3 +119,5 @@ class GatedGCNLSPELayer(nn.Module):
         return '{}(in_channels={}, out_channels={})'.format(self.__class__.__name__,
                                                             self.in_channels,
                                                             self.out_channels)
+
+
