@@ -6,8 +6,9 @@ Source code for the paper "**[A Canonicalization Perspective on Invariant and Eq
 
 To reproduce the repo follow the instructions in LSPE (see yml file in repo for GPU).
 We want to run:
-
- python main_ZINC_graph_regression.py --gpu_id 0 --config 'configs/GatedGCN_ZINC_OAP.json' --dataset ZINC-full
+```python
+ python main_ZINC_graph_regression.py --gpu_id 0 --config 'configs/GatedGCN_ZINC_OAP.json' --dataset 'ZINC-full'
+```
 
 and compare to EPNN as in the latex file.
 
