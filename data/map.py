@@ -3,10 +3,10 @@ import torch
 from torch import Tensor
 from torch_geometric.utils import to_dense_adj
 from torch_geometric.transforms import BaseTransform
-from torch_geometric.data.datapipes import functional_transform
+#from torch_geometric.data.datapipes import functional_transform
 
 
-@functional_transform('MAP')
+#@functional_transform('MAP')
 class MAP(BaseTransform):
     """
     Apply Maximal Axis Projection to the node features.
